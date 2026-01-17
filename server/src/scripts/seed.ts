@@ -16,18 +16,18 @@ const seed = async () => {
     // Clear existing data (optional, be careful in prod)
     // await query('DELETE FROM users');
 
-    const adminPassword = await bcrypt.hash('admin123', 10);
+    const adminPassword = await bcrypt.hash('admin', 10);
     const specialistPassword = await bcrypt.hash('password123', 10);
 
     // Create Admin
-    const adminCheck = await query("SELECT id FROM users WHERE email = 'admin@example.com'");
+    const adminCheck = await query("SELECT id FROM users WHERE email = 'admin@brius.consult'");
     if (adminCheck.rows.length === 0) {
       await query(
         `INSERT INTO users (email, password_hash, role, name, bio, timezone)
          VALUES ($1, $2, 'admin', 'Super Admin', 'System Administrator', 'UTC')`,
-        ['admin@example.com', adminPassword]
+        ['admin@brius.consult', adminPassword]
       );
-      console.log('Admin created: admin@example.com / admin123');
+      console.log('Admin created: admin@brius.consult / admin');
     }
 
     // Create Specialist
