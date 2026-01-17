@@ -125,7 +125,7 @@ const Dashboard = () => {
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200 bg-white">
             {user?.photo_url ? (
-              <img src={user.photo_url.startsWith('http') ? user.photo_url : `http://localhost:3000${user.photo_url}`} className="w-full h-full object-cover" />
+              <img src={user.photo_url.startsWith('http') ? user.photo_url : `/api/uploads/${user.photo_url.replace('/uploads/', '').replace('uploads/', '')}`} className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
                 <User size={20} />

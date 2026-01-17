@@ -44,7 +44,7 @@ const Home = () => {
               <div className="aspect-square rounded-2xl mb-6 overflow-hidden bg-gray-50">
                 {specialist.photo_url ? (
                   <img 
-                    src={specialist.photo_url.startsWith('http') ? specialist.photo_url : `http://localhost:3000${specialist.photo_url}`} 
+                    src={specialist.photo_url.startsWith('http') ? specialist.photo_url : `/api/uploads/${specialist.photo_url.replace('/uploads/', '').replace('uploads/', '')}`} 
                     alt={specialist.name} 
                     className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                   />
