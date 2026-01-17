@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # Caddy (HTTPS & Reverse Proxy)
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - client
+    networks:
+      - app-network
+
+  # База данных
+  db:
+    image: postgres:15-alpine
+    container_name: mentor_booking_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      POSTGRES_DB: ${POSTGRES_DB:-mentor_booking}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./server/src/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+
+  # Бэкенд сервер
+  server:
+    build: ./server
+    container_name: mentor_booking_server
+    restart: always
+    depends_on:
+      - db
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgrespassword}@db:5432/${POSTGRES_DB:-mentor_booking}
+      - JWT_SECRET=${JWT_SECRET}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - ADMIN_TELEGRAM_CHAT_ID=${ADMIN_TELEGRAM_CHAT_ID}
+    networks:
+      - app-network
+
+  # Фронтенд (React + Nginx)
+  client:
+    build: ./client
+    container_name: mentor_booking_client
+    restart: always
+    depends_on:
+      - server
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  app-network:
+    driver: bridge

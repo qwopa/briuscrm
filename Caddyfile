@@ -1,0 +1,3 @@
+briusconsult.com {
+    reverse_proxy client:80
+}

@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # База данных
+  db:
+    image: postgres:15-alpine
+    container_name: mentor_booking_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgrespassword}
+      POSTGRES_DB: ${POSTGRES_DB:-mentor_booking}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./server/src/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-network
+
+  # Бэкенд сервер
+  server:
+    build: ./server
+    container_name: mentor_booking_server
+    restart: always
+    depends_on:
+      - db
+    environment:
+      - PORT=3000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgrespassword}@db:5432/${POSTGRES_DB:-mentor_booking}
+      - JWT_SECRET=${JWT_SECRET}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - ADMIN_TELEGRAM_CHAT_ID=${ADMIN_TELEGRAM_CHAT_ID}
+    networks:
+      - app-network
+
+  # Фронтенд (React + Nginx)
+  client:
+    build: ./client
+    container_name: mentor_booking_client
+    restart: always
+    depends_on:
+      - server
+    ports:
+      - "80:80"
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
