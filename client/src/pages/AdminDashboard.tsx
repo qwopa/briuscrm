@@ -477,7 +477,7 @@ const AdminDashboard = () => {
                     onDrop={e => handleDrop(e, s.id)}
                   >
                     {s.photo_url ? (
-                      <img src={s.photo_url.startsWith('http') ? s.photo_url : `http://localhost:3000${s.photo_url}`} alt={s.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                      <img src={s.photo_url.startsWith('http') ? s.photo_url : `/api/uploads/${s.photo_url.replace('/uploads/', '').replace('uploads/', '')}`} alt={s.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-gray-300">
                         <Upload size={32} className="mb-2 opacity-50" />
