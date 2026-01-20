@@ -1,8 +1,17 @@
 import { Telegraf } from 'telegraf';
 import dotenv from 'dotenv';
 import { query } from '../db';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
 
 dotenv.config();
+
+// Helper to get current Moscow time formatted
+const getMoscowTime = () => {
+  const now = new Date();
+  const moscowDate = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
+  return format(moscowDate, "d MMMM yyyy, HH:mm:ss '(МСК)'", { locale: ru });
+};
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 const adminChatId = process.env.ADMIN_TELEGRAM_CHAT_ID;
@@ -14,7 +23,7 @@ if (bot) {
     const payload = (ctx as any).payload; // /start <code>
     
     if (!payload) {
-      return ctx.reply('Привет! Чтобы привязать свой аккаунт, напишите /start <ваш_код_из_панели>.');
+      return ctx.reply('Привет! Чтобы привязать свой аккаунт, напишите /start <ваш_код_из_панели>.\n\nДоступные команды:\n/time — текущее время по МСК');
     }
 
     try {
@@ -38,6 +47,11 @@ if (bot) {
       console.error('Telegram link error:', error);
       ctx.reply('Произошла ошибка при привязке аккаунта.');
     }
+  });
+
+  // Command to show current Moscow time
+  bot.command('time', (ctx) => {
+    ctx.reply(`🕐 Текущее время: <b>${getMoscowTime()}</b>`, { parse_mode: 'HTML' });
   });
 
   bot.launch().then(() => {

@@ -1,6 +1,23 @@
 version: '3.8'
 
 services:
+  # Caddy (HTTPS & Reverse Proxy)
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - client
+    networks:
+      - app-network
+
   # База данных
   db:
     image: postgres:15-alpine
@@ -41,14 +58,13 @@ services:
     restart: always
     depends_on:
       - server
-    ports:
-      - "80:80"
+    # Ports removed because Caddy handles ingress
     networks:
       - app-network
 
 volumes:
   postgres_data:
-
-networks:
+  caddy_data:
+  caddy_config:networks:
   app-network:
     driver: bridge

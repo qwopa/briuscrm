@@ -10,38 +10,22 @@ const formatMoscow = (date: Date | string, pattern: string) => {
   return format(new Date(d.toLocaleString('en-US', { timeZone: 'Europe/Moscow' })), pattern, { locale: ru });
 };
 
-// Daily Summary at 09:00 Moscow Time
-// If server is UTC+4, 09:00 MSK is 10:00 Server. 
-// To make it reliable, we run it every hour and check if it's 9am in Moscow, 
-// OR we just run it at a specific time and hope the server offset is stable.
-// Let's stick to 09:00 server time for now but fix the data range.
+// Daily Summary at 09:00 Moscow Time (MSK, UTC+3)
+// Uses timezone option to ensure it runs at 09:00 MSK regardless of server timezone
 cron.schedule('0 9 * * *', async () => {
-  console.log('Running daily summary cron...');
+  console.log('Running daily summary cron at 09:00 MSK...');
   try {
-    // Get Moscow "today" range in UTC
-    const nowMoscow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
-    
-    const startOfMoscowDay = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
-    startOfMoscowDay.setHours(0, 0, 0, 0);
-    
-    const endOfMoscowDay = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
-    endOfMoscowDay.setHours(23, 59, 59, 999);
-
-    // Convert Moscow bounds back to UTC for query
-    // This is tricky without date-fns-tz. 
-    // Let's use a simpler approach: fetch all today's bookings and filter in JS or use Postgres timezone logic.
-    
     const result = await query(
       `SELECT b.*, u.name as specialist_name 
        FROM bookings b 
        JOIN users u ON b.specialist_id = u.id 
-       WHERE (b.start_time AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Moscow')::date = CURRENT_DATE AT TIME ZONE 'Europe/Moscow'
+       WHERE (b.start_time AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Moscow')::date = (NOW() AT TIME ZONE 'Europe/Moscow')::date
        AND b.status = 'confirmed'
        ORDER BY b.start_time ASC`
     );
 
     if (result.rows.length === 0) {
-      return notifyAdmin('На сегодня созвонов нет.');
+      return notifyAdmin('📅 На сегодня созвонов нет.');
     }
 
     let message = `📅 <b>Сводка созвонов на сегодня (${formatMoscow(new Date(), 'd MMMM')}):</b>\n\n`;
@@ -53,9 +37,10 @@ cron.schedule('0 9 * * *', async () => {
   } catch (error) {
     console.error('Daily summary cron error:', error);
   }
-});
+}, { timezone: 'Europe/Moscow' });
 
-// Pre-call reminders every 15 minutes
+// Pre-call reminders every 15 minutes (timezone-agnostic, uses UTC for comparison)
+// This works correctly regardless of server timezone because start_time is stored in UTC
 cron.schedule('*/15 * * * *', async () => {
   console.log('Running pre-call reminders cron...');
   try {
@@ -80,4 +65,4 @@ cron.schedule('*/15 * * * *', async () => {
   } catch (error) {
     console.error('Pre-call reminder cron error:', error);
   }
-});
+}, { timezone: 'Europe/Moscow' });
