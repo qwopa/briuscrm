@@ -19,7 +19,7 @@ const seed = async () => {
     const adminPassword = await bcrypt.hash('admin', 10);
     const specialistPassword = await bcrypt.hash('password123', 10);
 
-    // Create Admin
+    // Create Admin (legacy)
     const adminCheck = await query("SELECT id FROM users WHERE email = 'admin@brius.consult'");
     if (adminCheck.rows.length === 0) {
       await query(
@@ -28,6 +28,17 @@ const seed = async () => {
         ['admin@brius.consult', adminPassword]
       );
       console.log('Admin created: admin@brius.consult / admin');
+    }
+
+    // Create Admin Lera
+    const leraCheck = await query("SELECT id FROM users WHERE email = 'lera@admin'");
+    if (leraCheck.rows.length === 0) {
+      await query(
+        `INSERT INTO users (email, password_hash, role, name, bio, timezone)
+         VALUES ($1, $2, 'admin', 'Лера', 'Администратор', 'Europe/Moscow')`,
+        ['lera@admin', adminPassword]
+      );
+      console.log('Admin created: lera@admin / admin');
     }
 
     // Create Specialist

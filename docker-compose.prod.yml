@@ -48,6 +48,8 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - ADMIN_TELEGRAM_CHAT_ID=${ADMIN_TELEGRAM_CHAT_ID}
+    volumes:
+      - ./uploads:/app/uploads
     networks:
       - app-network
 
