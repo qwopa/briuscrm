@@ -141,13 +141,18 @@ router.get('/specialists/:id/availability', async (req, res) => {
         const schedule = scheduleResult.rows[0];
 
         // 2. Get existing bookings for this day
-        // Using AT TIME ZONE to handle Moscow time comparison
+        // Calculate date range in UTC for the Moscow day
+        // Moscow day starts at 00:00 MSK = 21:00 UTC previous day
+        const dayStartUTC = new Date(Date.UTC(year, month - 1, day - 1, 21, 0, 0));
+        const dayEndUTC = new Date(Date.UTC(year, month - 1, day, 20, 59, 59));
+        
         const bookingsResult = await query(
             `SELECT start_time FROM bookings 
              WHERE specialist_id = $1 
-             AND DATE(start_time AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Moscow') = $2
+             AND start_time >= $2
+             AND start_time <= $3
              AND status != 'cancelled'`,
-            [id, date]
+            [id, dayStartUTC.toISOString(), dayEndUTC.toISOString()]
         );
 
         // 3. Generate slots
@@ -161,6 +166,11 @@ router.get('/specialists/:id/availability', async (req, res) => {
         let currentH = startH;
         let currentM = startM;
 
+        // Create a Set of booked times for faster lookup
+        const bookedTimes = new Set(
+            bookingsResult.rows.map((b: any) => new Date(b.start_time).getTime())
+        );
+
         while (currentH < endH || (currentH === endH && currentM < endM)) {
             // Assume 1 hour slots
             if (currentH + 1 > endH || (currentH + 1 === endH && currentM > endM)) break;
@@ -168,17 +178,13 @@ router.get('/specialists/:id/availability', async (req, res) => {
             // Create a date object for this slot in Moscow time
             // Moscow is UTC+3. So to get UTC, subtract 3 hours.
             const slotUTC = Date.UTC(year, month - 1, day, currentH - 3, currentM);
-            const slotDate = new Date(slotUTC);
             
-            // Check if booked
-            const isBooked = bookingsResult.rows.some((b: any) => {
-                const bDate = new Date(b.start_time);
-                return bDate.getTime() === slotUTC;
-            });
+            // Check if booked using Set lookup
+            const isBooked = bookedTimes.has(slotUTC);
 
             // Only add if not booked and in the future
             if (!isBooked && slotUTC > Date.now()) {
-                slots.push(slotDate.toISOString());
+                slots.push(new Date(slotUTC).toISOString());
             }
 
             currentH += 1;
@@ -203,8 +209,13 @@ router.get('/specialists/:id/month-availability', async (req, res) => {
     try {
         const m = parseInt(month as string);
         const y = parseInt(year as string);
-        const startDate = new Date(y, m - 1, 1);
-        const endDate = new Date(y, m, 0, 23, 59, 59, 999);
+        
+        // Calculate UTC range for the entire month in Moscow time
+        // Month starts at 00:00 MSK on day 1 = 21:00 UTC on previous day
+        const startDateUTC = new Date(Date.UTC(y, m - 1, 0, 21, 0, 0));
+        // Month ends at 23:59 MSK on last day = 20:59 UTC on last day
+        const daysInMonth = new Date(y, m, 0).getDate();
+        const endDateUTC = new Date(Date.UTC(y, m - 1, daysInMonth, 20, 59, 59));
 
         // Get specialist's schedule
         const scheduleResult = await query(
@@ -215,19 +226,26 @@ router.get('/specialists/:id/month-availability', async (req, res) => {
         
         const activeDays = new Set(scheduleResult.rows.map(s => s.day_of_week));
         
-        // Get all bookings for this month
+        // Get all bookings for this month with their Moscow dates
         const bookingsResult = await query(
-            `SELECT DATE(start_time AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Moscow') as booking_date, COUNT(*) as count
-             FROM bookings 
+            `SELECT start_time FROM bookings 
              WHERE specialist_id = $1 
              AND start_time >= $2 AND start_time <= $3
-             AND status != 'cancelled'
-             GROUP BY booking_date`,
-            [id, startDate.toISOString(), endDate.toISOString()]
+             AND status != 'cancelled'`,
+            [id, startDateUTC.toISOString(), endDateUTC.toISOString()]
         );
 
+        // Count bookings per Moscow date
+        const bookingCountByDate: Record<string, number> = {};
+        for (const b of bookingsResult.rows) {
+            const utcDate = new Date(b.start_time);
+            // Convert to Moscow time
+            const mskDate = new Date(utcDate.getTime() + 3 * 60 * 60 * 1000);
+            const dateStr = `${mskDate.getUTCFullYear()}-${String(mskDate.getUTCMonth() + 1).padStart(2, '0')}-${String(mskDate.getUTCDate()).padStart(2, '0')}`;
+            bookingCountByDate[dateStr] = (bookingCountByDate[dateStr] || 0) + 1;
+        }
+
         const fullDays: string[] = [];
-        const daysInMonth = new Date(y, m, 0).getDate();
         
         for (let day = 1; day <= daysInMonth; day++) {
             const date = new Date(y, m - 1, day);
@@ -247,18 +265,9 @@ router.get('/specialists/:id/month-availability', async (req, res) => {
                 const [endH] = schedule.end_time.split(':').map(Number);
                 const totalSlots = endH - startH; 
 
-                const booking = bookingsResult.rows.find((b: any) => {
-                    // b.booking_date is a Date object from pg driver, but represents midnights in local time or UTC
-                    // Let's format it to YYYY-MM-DD string directly for comparison
-                    const bDate = new Date(b.booking_date);
-                    const y = bDate.getFullYear();
-                    const m = bDate.getMonth() + 1;
-                    const d = bDate.getDate();
-                    const bDateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                    return bDateStr === dateStr;
-                });
+                const bookingCount = bookingCountByDate[dateStr] || 0;
                 
-                if (booking && Number(booking.count) >= totalSlots) {
+                if (bookingCount >= totalSlots) {
                     fullDays.push(dateStr);
                 }
             }
