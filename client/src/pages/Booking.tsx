@@ -5,7 +5,7 @@ import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameM
 import { ru } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, CheckCircle, ArrowLeft, Clock, Calendar as CalendarIcon, Info } from 'lucide-react';
 import { clsx } from 'clsx';
-import { getMoscowToday, isTodayMSK, isPastMSK, formatTimeMSK } from '../lib/dateUtils';
+import { isTodayMSK, isPastMSK, formatTimeMSK } from '../lib/dateUtils';
 
 interface Specialist {
   id: number;
