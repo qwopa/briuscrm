@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../lib/axios';
-import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, startOfWeek, endOfWeek } from 'date-fns';
+import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, CheckCircle, ArrowLeft, Clock, Calendar as CalendarIcon, Info } from 'lucide-react';
 import { clsx } from 'clsx';
+import { getMoscowToday, isTodayMSK, isPastMSK, formatTimeMSK } from '../lib/dateUtils';
 
 interface Specialist {
   id: number;
@@ -149,9 +150,7 @@ const Booking = () => {
               {calendarDays.map((day, idx) => {
                 const dateStr = format(day, 'yyyy-MM-dd');
                 const isFull = fullDays.includes(dateStr);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const isPast = day < today;
+                const isPast = isPastMSK(day);
                 const isUnavailable = isFull || isPast;
 
                 return (
@@ -164,7 +163,7 @@ const Booking = () => {
                       !isSameMonth(day, currentMonth) && "opacity-0 pointer-events-none",
                       isUnavailable && "text-gray-300 cursor-not-allowed bg-gray-50/50",
                       !isUnavailable && isSameDay(day, selectedDate || new Date(0)) ? "bg-[#94EA00] text-[#1d1d1f]" : "bg-white border border-gray-100 hover:border-[#94EA00] hover:bg-[#94EA00]/5",
-                      isToday(day) && !isSameDay(day, selectedDate || new Date(0)) && "border-2 border-[#94EA00]/30"
+                      isTodayMSK(day) && !isSameDay(day, selectedDate || new Date(0)) && "border-2 border-[#94EA00]/30"
                     )}
                   >
                     {format(day, 'd')}
@@ -197,7 +196,7 @@ const Booking = () => {
                         : "bg-white border-gray-100 hover:border-[#94EA00] hover:bg-[#94EA00]/5"
                     )}
                   >
-                    {format(new Date(slot), 'HH:mm')}
+                    {formatTimeMSK(slot)}
                   </button>
                 ))}
                 {slots.length === 0 && (

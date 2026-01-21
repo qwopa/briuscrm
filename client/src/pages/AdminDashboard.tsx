@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { LogOut, Plus, Trash2, Edit2, Upload, X, Users, Clock, Mail, MessageCircle, Copy, Check, RefreshCw, Calendar } from 'lucide-react';
 import { clsx } from 'clsx';
+import { toMoscowTime } from '../lib/dateUtils';
 
 interface Specialist {
   id: number;
@@ -296,7 +297,7 @@ const AdminDashboard = () => {
                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Дата и время (МСК)</span>
                       <p className="font-bold flex items-center gap-2">
                         <Calendar size={14} className="text-[#7bb300]" />
-                        {format(new Date(b.start_time), 'd MMM, HH:mm', { locale: ru })}
+                        {format(toMoscowTime(b.start_time), 'd MMM, HH:mm', { locale: ru })}
                       </p>
                     </div>
                   </div>

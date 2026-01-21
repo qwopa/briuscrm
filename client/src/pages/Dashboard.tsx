@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { LogOut, CheckCircle, XCircle, MessageCircle, Copy, Check, Clock, Save, Calendar, User } from 'lucide-react';
 import { clsx } from 'clsx';
+import { toMoscowTime } from '../lib/dateUtils';
 
 interface Booking {
   id: number;
@@ -114,7 +115,9 @@ const Dashboard = () => {
 
   const filteredBookings = bookings.filter(booking => {
     if (!hidePast) return true;
-    const isFuture = new Date(booking.start_time).getTime() > Date.now();
+    const bookingTime = new Date(booking.start_time).getTime();
+    const nowMsk = Date.now();
+    const isFuture = bookingTime > nowMsk;
     const isConfirmed = booking.status === 'confirmed';
     return isFuture && isConfirmed;
   });
@@ -262,7 +265,7 @@ const Dashboard = () => {
                       <div>
                         <div className="flex items-center gap-2 text-gray-400 mb-1">
                           <Calendar size={14} />
-                          <span className="text-xs font-bold uppercase tracking-wider">{format(new Date(booking.start_time), 'd MMM yyyy', { locale: ru })}</span>
+                          <span className="text-xs font-bold uppercase tracking-wider">{format(toMoscowTime(booking.start_time), 'd MMM yyyy', { locale: ru })}</span>
                         </div>
                         <h4 className="text-lg font-bold">{booking.client_name}</h4>
                       </div>
@@ -286,7 +289,7 @@ const Dashboard = () => {
                   <div className="sm:w-32 flex flex-row sm:flex-col justify-end gap-2 border-t sm:border-t-0 sm:border-l border-gray-100 pt-4 sm:pt-0 sm:pl-6">
                     <div className="flex items-center gap-2 text-[#7bb300] font-bold mb-auto">
                       <Clock size={16} />
-                      <span>{format(new Date(booking.start_time), 'HH:mm')}</span>
+                      <span>{format(toMoscowTime(booking.start_time), 'HH:mm')}</span>
                     </div>
                     
                     {booking.status === 'confirmed' && (
